@@ -18,7 +18,6 @@ module.exports = class RetributionCommission {
     }
 
     static apply(EventsList) {
-
         let projection = {
             hasPendingInvoice: false
         };

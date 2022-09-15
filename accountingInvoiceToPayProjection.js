@@ -25,5 +25,4 @@ module.exports = class AccountingInvoiceToPayProjection {
                 throw new Error('Not handled');
         }
     }
-
 }
