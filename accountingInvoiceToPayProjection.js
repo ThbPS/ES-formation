@@ -1,12 +1,7 @@
-const Event = require('./event');
-
 const {
-    UNVALIDATED_INVOICE,
     VALIDATED_INVOICE,
     GENERATED_SEPA,
-    INVOICE_SENT
 } = require('./constant');
-
 const AccountingInvoiceToPayRepository = require('./accountingInvoiceToPayRepository');
 
 module.exports = class AccountingInvoiceToPayProjection {
