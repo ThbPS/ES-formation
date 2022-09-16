@@ -1,12 +1,13 @@
 module.exports = class EventPublisher {
     dictionnary = new Map();
 
-    publish(events, eventStore) {
-        eventStore.save();
+    publish(events, eventStore, version) {
+        eventStore.save(events, version);
         events.forEach(event => {
             const { name } = event;
             const callbacks = this.dictionnary.get(name);
-            callbacks.forEach(callback => callback(event));
+            if (callbacks)
+                callbacks.forEach(callback => callback(event));
         });
     }
 

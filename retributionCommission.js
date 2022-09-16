@@ -5,6 +5,7 @@ const {
     GENERATED_SEPA,
     INVOICE_SENT
 } = require('./constant');
+const invoiceProjection = require('./invoicesProjection');
 
 module.exports = class RetributionCommission {
     hasPendingInvoice;
@@ -18,31 +19,25 @@ module.exports = class RetributionCommission {
     }
 
     static apply(EventsList) {
-        let projection = {
-            hasPendingInvoice: false
-        };
+        const decisionProjection = new invoiceProjection();
         EventsList.forEach(event => {
-            if (event.name === INVOICE_SENT) {
-                projection.hasPendingInvoice = true;
-            }
-            if (event.name === VALIDATED_INVOICE) {
-                projection.hasPendingInvoice = false;
-            }
+            decisionProjection.When(event);
         });
-        return projection;
+        return decisionProjection;
     }
 
-    static sendInvoice(EventsList) {
-        const projection = this.apply(EventsList);
-        if (projection.hasPendingInvoice) {
+    static sendInvoice(sendInvoiceCommand, EventsList) {
+        const decisionProjection = this.apply(EventsList);
+        if (decisionProjection.invoiceToValidate) {
             throw new Error('Invoice sent error');
         }
 
-        return new Event(INVOICE_SENT, {
-            invoiceId: 123456,
-            amount: 12,
-            create
-        });
+        return [
+            new Event(INVOICE_SENT, {
+                invoiceId: sendInvoiceCommand.invoiceId,
+                amount: sendInvoiceCommand.amount,
+            })
+        ];
     }
 
     static validateInvoice(EventsList) {

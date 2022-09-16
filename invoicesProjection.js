@@ -9,6 +9,7 @@ const {
 
 module.exports = class InvoicesProjection {
     waitingInvoices = [];
+    invoiceToValidate = null;
 
     getWaitingInvoices() {
         return this.waitingInvoices;
@@ -17,12 +18,15 @@ module.exports = class InvoicesProjection {
     When(event) {
         switch (event.name) {
             case INVOICE_SENT:
+                this.invoiceToValidate = event.invoice.invoiceId;
                 this.WhenInvoiceReceived(event.invoice);
                 break;
             case VALIDATED_INVOICE:
+                this.invoiceToValidate = null;
                 this.WhenInvoiceValidated(event.invoice);
                 break;
             case UNVALIDATED_INVOICE:
+                this.invoiceToValidate = null;
                 this.WhenInvoiceUnvalidated(event.invoice);
                 break;
             default: 

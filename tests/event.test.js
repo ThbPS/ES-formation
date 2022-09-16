@@ -10,6 +10,10 @@ const Event = require('../event');
 
 const InvoicesProjection = require('../invoicesProjection');
 const AccountingInvoiceToPayProjection = require('../accountingInvoiceToPayProjection');
+const EventStore = require('../eventStore');
+const RetributionCommissionCommandHandler = require('../retributionCommissionCommandHandler');
+const EventPubliser = require('../eventPublisher');
+const sendInvoiceCommand = require('../sendInvoiceCommand');
 
 test('When WhenInvoiceReceived', () => {
     const invoicesProjection = new InvoicesProjection();
@@ -101,42 +105,27 @@ test('When sepa is generated', () => {
     expect(waitingInvoices.length).toBe(0);
 });
 
-/**
- *  Projection de lecture AccountingInvoiceToPayProjection
-    Quand une facture est Validée, la facture est ajouté a la liste (InvoiceId) + Amount total
-    Quand le fichier SEPA  gen, la facture est retiré de la liste
- */
+test('Retribution commission handler publish and persist events data', () => {
+    const invoice = {
+        invoiceId: 123456,
+        amount: 12,
+    };
+    const aggegrateId = 1;
+    const version = 1;
 
-// describe('Given an invoice is sent', () => {
-//     const retributionCommission = new RetributionCommission();
-//     describe('When the invoice is sent', () => {
-//         test('Then seller sent event', () => {
-//             const sendInvoice = retributionCommission.send();
-//             expect(sendInvoice.name).toBe(INVOICE_SENT);
-//         });
-//         test('If an invoice is sent we cannot send another', () => {
-//             try {
-//                 retributionCommission.send();
-//             } catch (error) {
-//                 expect(error.message).toBe('Invoice sent error');
-//             }
-//         });
-//     });
-// });
+    const store = new EventStore(aggegrateId, VALIDATED_INVOICE);
+    const publisher = new EventPubliser();
+    const retributionCommissionCommandHandler = new RetributionCommissionCommandHandler(publisher, store);
+    const invoiceEvent = new Event(VALIDATED_INVOICE, invoice);
 
-// describe('Given an invoice is sent to accounting', () => {
-//     const retributionCommission = new RetributionCommission();
-//     describe('When the invoice is validated', () => {
-//         test('Then the invoice is validated', () => {
-//             const validateInvoice = retributionCommission.validate();
-//             expect(validateInvoice.name).toBe(VALIDATED_INVOICE);
-//         });
-//         test('Then the invoice is unvalidated', () => {
-//             const unvalidateInvoice = retributionCommission.unvalidateInvoice();
-//             expect(unvalidateInvoice.name).toBe(UNVALIDATED_INVOICE);
-//         });
-//         test('Then a SEPA file is generated', () => {
-//             expect(retributionCommission.generateSepa().name).toBe(GENERATED_SEPA);
-//         });
-//     });
-// });
+    // mock an invoice event
+    store.save([invoiceEvent], 1);
+    expect(store.get(aggegrateId)).toEqual({ events: [invoiceEvent], version: version });
+
+    // mock publisher handler
+    const mockPublisherHandler = jest.fn(event => event);
+    publisher.subscribe(INVOICE_SENT, mockPublisherHandler);
+
+    retributionCommissionCommandHandler.sendInvoice(new sendInvoiceCommand(aggegrateId, invoice.invoiceId, invoice.amount));
+    expect(mockPublisherHandler.mock.calls.length).toBe(1);
+});
